@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Shopify Script Minifier</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <style>
+    h1 {
+      text-align: center;
+    }
+
+    .content-container {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-line-pack: distribute;
+          align-content: space-around;
+      -ms-flex-wrap: wrap;
+          flex-wrap: wrap;
+    }
+
+    .container-div {
+      -webkit-box-flex: 1;
+          -ms-flex: 1 1 45%;
+              flex: 1 1 45%;
+      margin: 1%;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+          -ms-flex-direction: column;
+              flex-direction: column;
+    }
+
+    .container-div label {
+      text-align: center;
+    }
+
+    .container-div textarea {
+      -webkit-box-flex: 1;
+          -ms-flex: 1 1 45%;
+              flex: 1 1 45%;
+      margin: 2%;
+      padding: 6px;
+      height: 450px;
+      font-family: monospace;
+    }
+
+    button {
+      display: block;
+      margin: auto;
+      width: 300px;
+      line-height: 40px;
+      border:1px solid #15aeec;
+      font-size: 16px;
+      -webkit-box-shadow: #B4B5B5 4px 4px 4px;
+      box-shadow: #B4B5B5 4px 4px 4px;
+      border-radius: 50px;
+      text-decoration: none;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+      font-weight:bold;
+      color: #FFFFFF;
+      background-color: #49c0f0; 
+      background-image: -webkit-gradient(linear, left top, left bottom, from(#49c0f0), to(#2CAFE3));
+      background-image: -webkit-linear-gradient(top, #49c0f0, #2CAFE3);
+      background-image: -o-linear-gradient(top, #49c0f0, #2CAFE3);
+      background-image: linear-gradient(to bottom, #49c0f0, #2CAFE3);filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0,startColorstr=#49c0f0, endColorstr=#2CAFE3);
+    }
+
+    button:hover {
+      border:1px solid #1090c3;
+      background-color: #1ab0ec; 
+      background-image: -webkit-gradient(linear, left top, left bottom, from(#1ab0ec), to(#1a92c2));
+      background-image: -webkit-linear-gradient(top, #1ab0ec, #1a92c2);
+      background-image: -o-linear-gradient(top, #1ab0ec, #1a92c2);
+      background-image: linear-gradient(to bottom, #1ab0ec, #1a92c2);filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0,startColorstr=#1ab0ec, endColorstr=#1a92c2);
+    }
+
+    .counter {
+      text-align: center;
+      font-size: 40px;
+      min-height: 45px;
+    }
+
+    #Icount {
+      color: #2ba7ff;
+    }
+
+    #Ocount {
+      color: #11b753;
+    }
+
+    #Savings {
+      margin-top: 30px;
+      opacity: 0;
+      color: #9364ef;
+      -webkit-transition: opacity 300ms;
+      -o-transition: opacity 300ms;
+      transition: opacity 300ms;
+    }
+
+    #Savings.shown {
+      opacity: 1;
+    }
+  </style>
+  <body>
+    <h1>Paste your code into the Input area, click minify and copy your code from the Output area</h1>
+    <form>
+      <div class="content-container">
+        <div class="container-div">
+          <label for='input'>Input</label>
+          <textarea id="input"></textarea>
+          <div id="Icount" class="counter"></div>
+        </div>
+        <div class="container-div">
+          <label for='output'>Output</label>
+          <textarea id="output"></textarea>
+          <div id="Ocount" class="counter"></div>
+        </div>
+      </div>
+      <button type="submit">Minify</button>
+    </form>
+    <div id="Savings" class="counter">You reduced the size by <span>0</span> characters!</div>
+    <script>
+      (function() {
+        document.querySelector('form').addEventListener('submit', minify);
+
+        function minify(event) {
+          event.preventDefault();
+          var startingBrackets = /[\[\{\(]/;
+          var endingBrackets = /[\]\}\)]/;
+          var captureStartingBracket = /([\[\{\(])/;
+          var commaOrSemicolon = /[,;]/;
+          var input = document.querySelector('#input').value;
+          var output = document.querySelector('#output');
+          var inputCounter = document.querySelector('#Icount');
+          var outputCounter = document.querySelector('#Ocount');
+          var savingsSection = document.querySelector('#Savings');
+          var savingsCounter = savingsSection.querySelector('span');
+          var insideBrackets = false;
+          var endBracket = '';
+          var BRACKETMAP = {
+            '[': ']',
+            '(': ')',
+            '{': '}' 
+          }
+
+          // Get initial character count
+          var initialCount = input.length;
+          inputCounter.innerText = initialCount;
+
+          // split input into lines
+          var lines = input.split('\n');
+
+          // remove whitespace lines
+          lines = lines.filter((line) => line.trim().length > 0);
+          console.log(lines);
+
+          for (var line in lines) {
+            var content = lines[line].trim();
+
+            // remove single line and in-line comments
+            if (content[0] === '#') {
+              content = "";
+            } else if (content.indexOf('#') > -1) {
+              var index = content.indexOf('#');
+              if (content[index + 1] !== '{') {
+                content = content.substring(0, index).trim();
+              }
+            }
+
+            // add semi-colons except for certain conditions
+            var length = content.length;
+            if (content.search(/[,\[\]\(\)\{\}]/) > -1) {
+              // Handle brackets
+              if (content.search(startingBrackets) > -1 && content.search(endingBrackets) > -1 && !commaOrSemicolon.test(content[length - 1])) {
+                content += ';';
+              } else if (!insideBrackets && content.search(startingBrackets) > -1) {
+                insideBrackets = true;
+                endBracket = BRACKETMAP[content.match(captureStartingBracket)[0]];
+              } else if (!insideBrackets && !commaOrSemicolon.test(content[length - 1])) {
+                content += ';';
+              } else if (insideBrackets && content.indexOf(endBracket) > -1) {
+                if (content[length - 1] !== endBracket && !commaOrSemicolon.test(content[length - 1])) {
+                  content += ';';
+                }
+                insideBrackets = false;
+              }
+            } else if (content !== "" && !insideBrackets && !commaOrSemicolon.test(content[length - 1])) {
+              content += ';';
+            }
+            lines[line] = content;
+          }
+
+          // output to the textarea
+          output.value = lines.join('');
+          
+          // get output character count and show savings
+          var outputCount = output.value.length;
+          outputCounter.innerText = outputCount;
+          var savingsCount = initialCount - outputCount;
+          savingsCounter.innerText = savingsCount;
+          savingsSection.classList.add('shown');
+        }
+      })();
+    </script>
+  </body>
+</html>
